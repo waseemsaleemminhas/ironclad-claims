@@ -90,3 +90,29 @@ create policy audit_read on audit_log
 create policy audit_append on audit_log
   for insert to authenticated with check (is_org_member(org_id));
 revoke update, delete on audit_log from authenticated, anon;
+
+-- Grants alone are not enough: any later `grant all on all tables in schema
+-- public` — which Supabase's own docs suggest — silently re-opens this table.
+-- A trigger cannot be undone by a grant, so immutability is enforced here.
+-- The escape hatch exists only for a deliberate retention purge:
+--   set local claimline.allow_audit_purge = 'on';
+create or replace function public.audit_log_append_only()
+returns trigger
+language plpgsql
+as $$
+begin
+  if coalesce(current_setting('claimline.allow_audit_purge', true), 'off') = 'on' then
+    return null;
+  end if;
+  raise exception 'audit_log is append-only: % is not permitted', tg_op
+    using hint = 'Correct a mistaken entry by appending a new one.';
+end;
+$$;
+
+create trigger audit_log_no_update
+  before update on audit_log
+  for each statement execute function public.audit_log_append_only();
+
+create trigger audit_log_no_delete
+  before delete on audit_log
+  for each statement execute function public.audit_log_append_only();

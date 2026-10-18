@@ -22,7 +22,7 @@ create table org_members (
 -- Per-org HMAC salt. No client role may ever read this table.
 create table org_secrets (
   org_id     uuid primary key references orgs(id) on delete cascade,
-  phone_salt text not null default encode(extensions.gen_random_bytes(32), 'hex')
+  phone_salt text not null default encode(sha256((gen_random_uuid()::text || gen_random_uuid()::text)::bytea), 'hex')
 );
 
 -- ---------------------------------------------------------------- commercial setup
@@ -227,6 +227,24 @@ create index on audit_log (org_id, at desc);
 
 -- ---------------------------------------------------------------- phone hashing
 
+-- Digits only, with the US/Canada country code dropped, so that
+-- "+1 (555) 212-9900", "555-212-9900" and "15552129900" are one number.
+-- Without this, a sale logged with a country code never matches its call
+-- and the line silently falls off the claim.
+create or replace function public.normalize_phone(p_phone text)
+returns text
+language sql
+immutable
+as $$
+  select case
+    when length(d) = 11 and left(d, 1) = '1' then right(d, 10)
+    else d
+  end
+  from (select regexp_replace(coalesce(p_phone, ''), '\D', '', 'g') as d) t;
+$$;
+
+grant execute on function public.normalize_phone(text) to authenticated;
+
 -- Returns the HMAC of a phone number using the caller's org salt.
 -- The salt itself is never readable by any client role.
 create or replace function public.hash_phone(p_org uuid, p_phone text)
@@ -239,8 +257,8 @@ as $$
   select case
     when exists (select 1 from org_members m where m.org_id = p_org and m.user_id = auth.uid())
     then encode(
-      extensions.hmac(
-        regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'),
+      hmac(
+        normalize_phone(p_phone),
         (select s.phone_salt from org_secrets s where s.org_id = p_org),
         'sha256'
       ), 'hex')
