@@ -35,11 +35,18 @@ begin
   else raise notice 'FAIL  phone normalisation is wrong';
   end if;
 
-  -- 2. the salt is unreachable
-  if (select count(*) from org_secrets) = 0
-  then raise notice 'PASS  org salt is unreadable';
-  else raise notice 'FAIL  org salt is readable by a client role';
-  end if;
+  -- 2. the salt is unreachable.
+  -- Two defences apply: org_secrets has no RLS policy, and the client roles
+  -- have no table grant. Either one refusing is a pass, and which one fires
+  -- depends on how grants were set up, so accept both.
+  begin
+    if (select count(*) from org_secrets) = 0
+    then raise notice 'PASS  org salt is unreadable (no rows visible)';
+    else raise notice 'FAIL  org salt is readable by a client role';
+    end if;
+  exception when insufficient_privilege then
+    raise notice 'PASS  org salt is unreadable (permission denied)';
+  end;
 
   -- 3. hashing for an org you do not belong to
   if hash_phone('00000000-dead-beef-0000-00000000000b', '5552129900') is null
