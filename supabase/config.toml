@@ -1,0 +1,16 @@
+# Deliberately minimal.
+#
+# The GitHub integration's "configure" step applies [db], [api], [auth],
+# [storage] and [experimental] from this file over the project's own settings
+# — but on a persistent branch such as production it only does so if a
+# [remotes] block names that project id. There is no [remotes] block here, on
+# purpose: this repo manages the schema, not your project's settings. Nothing
+# in the Supabase dashboard gets overwritten by a push.
+#
+# Add a [remotes.production] block later only if you decide you want project
+# configuration managed as code too.
+
+project_id = "claimline"
+
+[db.migrations]
+enabled = true

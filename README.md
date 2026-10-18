@@ -41,8 +41,8 @@ storage, self-serve signup and billing, and any client-facing portal.
     lib/qualify.ts     is this call billable, and why       (pure, tested)
     lib/match.ts       tie a logged sale to its call        (pure, tested)
     lib/allocate.ts    apply a payment to specific lines    (pure, tested)
-    supabase/migrations/0001_init.sql    schema
-    supabase/migrations/0002_rls.sql     row-level security
+    supabase/migrations/<ts>_init.sql    schema
+    supabase/migrations/<ts>_rls.sql     row-level security
     tests/                               unit tests for the pure logic
 
 The three pure modules are where every dispute originates. They take plain objects,
@@ -51,3 +51,20 @@ return plain objects, touch no database, and are tested first.
 ## Running the tests
 
     npm test
+
+## Deployment
+
+The Supabase GitHub integration applies everything in `supabase/migrations/`
+in timestamp order, skipping any file already recorded in that database's
+`supabase_migrations.schema_migrations` table. Each file runs inside a single
+transaction.
+
+Two consequences worth remembering:
+
+- **Never edit a migration that has already been applied anywhere.** Its
+  checksum is recorded. Add a new timestamped migration instead.
+- **Never apply a migration by hand in the SQL editor on a project the
+  integration deploys to.** The schema changes but the history table does not,
+  so the next push tries to run it again and fails on "relation already
+  exists". If that happens, `supabase migration repair --status applied <ts>`
+  tells the history table it was already done.
