@@ -1,0 +1,19 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # The billing logic is pure and dependency-free, so there is nothing to
+      # install. If a change to qualify/match/allocate breaks an invariant,
+      # it fails here rather than on a claim sent to a client.
+      - run: npm test
