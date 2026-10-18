@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink:      oklch(0.22 0.012 250);
+  --color-ink-2:    oklch(0.52 0.015 250);
+  --color-ink-3:    oklch(0.68 0.012 250);
+  --color-surface:  oklch(1 0 0);
+  --color-canvas:   oklch(0.975 0.004 250);
+  --color-line:     oklch(0.90 0.008 250);
+  --color-accent:   oklch(0.47 0.12 240);
+  --color-good:     oklch(0.52 0.11 155);
+  --color-warn:     oklch(0.62 0.13 75);
+  --color-bad:      oklch(0.53 0.17 25);
+  --font-sans: "Inter var", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+html { color-scheme: light; }
+body { background: var(--color-canvas); color: var(--color-ink); }
+
+/* Figures in tables must line up — this is a money application. */
+.tabular { font-variant-numeric: tabular-nums; }
